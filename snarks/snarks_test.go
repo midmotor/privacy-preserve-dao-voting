@@ -1,21 +1,21 @@
 package snarks
 
 import (
-	"github.com/consensys/gnark/backend/groth16"
-	"github.com/consensys/gnark/frontend/cs/r1cs"
-	"math/big"
-	"testing"
-
 	"github.com/consensys/gnark-crypto/ecc"
 	bn254 "github.com/consensys/gnark-crypto/ecc/bn254/twistededwards"
+	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/r1cs"
 	_ "github.com/consensys/gnark/frontend/cs/r1cs"
+	"math/big"
+	"testing"
 )
 
-func TestGroth(t *testing.T) {
+func TestGrothBox4(t *testing.T) {
+	boxNumber := 4
 	//create pair
 	priv := new(big.Int).SetInt64(100)
-	pub := new(bn254.PointAffine).ScalarMultiplication(&Base, priv)
+	pub := new(bn254.PointAffine).ScalarMultiplication(&BASE, priv)
 	// priv := new(big.Int).SetInt64(100)
 
 	// weight
@@ -23,28 +23,28 @@ func TestGroth(t *testing.T) {
 
 	// create current bc Votes
 	votes := []*big.Int{new(big.Int).SetInt64(1), new(big.Int).SetInt64(1), new(big.Int).SetInt64(1), new(big.Int).SetInt64(1)}
-	randoms := []*big.Int{new(big.Int).SetInt64(1111), new(big.Int).SetInt64(1111), new(big.Int).SetInt64(1111), new(big.Int).SetInt64(1111)}
+	randoms := createRandoms(boxNumber)
 	currentEncVotes := CreateVotes(votes, randoms, pub)
 
 	// create add Votes
 	addVotes := []*big.Int{new(big.Int).SetInt64(1), new(big.Int).SetInt64(2), new(big.Int).SetInt64(3), new(big.Int).SetInt64(4)}
-	addRandoms := []*big.Int{new(big.Int).SetInt64(111), new(big.Int).SetInt64(222), new(big.Int).SetInt64(333), new(big.Int).SetInt64(444)}
+	addRandoms := createRandoms(boxNumber)
 	addEncVotes := CreateVotes(addVotes, addRandoms, pub)
 
 	// create new stage of Votes
-	newEncVotes := AddVotes(currentEncVotes, addEncVotes)
+	newEncVotes := AddVotes(currentEncVotes, addEncVotes, 4)
 
-	var circuit CircuitMain
+	var circuit Circuit4
 
 	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
 	pk, vk, _ := groth16.Setup(r1cs)
-	assignment := CircuitMain{}
+	assignment := Circuit4{}
 
 	assignment.VoteWeight = weight
 	assignment.MasterPubKey.X = pub.X
 	assignment.MasterPubKey.Y = pub.Y
 
-	for i := 0; i < COUNT; i++ {
+	for i := 0; i < boxNumber; i++ {
 		assignment.Randoms[i] = addRandoms[i]
 		assignment.Vote[i] = addVotes[i]
 
@@ -62,12 +62,10 @@ func TestGroth(t *testing.T) {
 	witness, _ := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	publicWitness, err := witness.Public()
 
-	// create proof
 	proof, err := groth16.Prove(r1cs, pk, witness)
 	if err != nil {
 		t.Fatalf("prove error: %s", err)
 	}
-	//t.Logf("proof: %+v", proof)
 
 	err = groth16.Verify(proof, vk, publicWitness)
 	if err != nil {
