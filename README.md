@@ -7,7 +7,6 @@ This repository offers two different systems using ZKPs:
 
 ## TODO List
 
-- Create a benchmark for Groth16.
 - Provide performance results for both ZKP systems.
 
 
