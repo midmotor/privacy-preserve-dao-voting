@@ -48,7 +48,7 @@ func BenchmarkSigma(b *testing.B) {
 		{
 			"votePower:3, boxNumber:6",
 			new(big.Int).SetInt64(3),
-			4,
+			6,
 			[]*big.Int{
 				big.NewInt(0),
 				big.NewInt(0),
